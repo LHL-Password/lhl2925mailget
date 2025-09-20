@@ -330,7 +330,21 @@ def _read_mail_content_internal(message_id, folder_name="Inbox"):
             'traceId': generate_trace_id()
         }
 
-        response = requests.get(MAIL_READ_URL, params=params, headers=DEFAULT_HEADERS, timeout=30)
+        # 使用session来设置cookies（重要！）
+        session = requests.Session()
+
+        # 设置cookies - 这是关键！
+        cookies = {
+            'aut': CURRENT_TOKEN,
+            'jwt_token': CURRENT_TOKEN,
+            'account': MAILBOX.replace('@', '%40'),
+            'uid': 'user_id_placeholder'
+        }
+
+        for name, value in cookies.items():
+            session.cookies.set(name, value)
+
+        response = session.get(MAIL_READ_URL, params=params, headers=DEFAULT_HEADERS, timeout=30)
         response.raise_for_status()
         return response.json()
 
