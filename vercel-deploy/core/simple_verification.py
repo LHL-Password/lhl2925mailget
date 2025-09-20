@@ -22,6 +22,9 @@ def get_china_time():
 # 配置信息（直接内嵌，避免复杂的导入）
 CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6Ijk2ZjkxZDYwLWJiZTktNDIxOC05MThiLTA5NDI3N2VhYmViYyIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzU2ODYyLCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODM2NDA2MiwibmJmIjoxNzU4MzU2ODAyfQ.aMfMHRBcg3_dHlTNgrI_ZpG4fYpv6eLnoYN1uaT_Nrc"
 
+# AUC token (从登录cookies中获取，用于邮件API请求)
+AUC_TOKEN = ""
+
 # 登录配置信息
 USERNAME = "li1214652981@2925.com"
 PASSWORD = "lhl1214652981"
@@ -176,17 +179,39 @@ def get_new_token():
             # 检查token有效性
             if token and len(token) > 50:  # JWT token通常很长
                 print(f"✅ 成功获取有效token")
+
+                # 同时更新AUC token（从cookies中获取）
+                global AUC_TOKEN
+                if 'auc' in cookies:
+                    AUC_TOKEN = cookies['auc']
+                    print(f"✅ 同时获取到AUC token")
+
                 return token
             else:
                 print(f"❌ Token无效或为空")
-                print(f"🔍 完整result内容: {result_data}")
 
-                # 如果有回调URL，记录但不处理（服务器环境可能不支持）
+                # 如果有回调URL，尝试访问获取真正的token
                 callback_url = result_data.get('url')
                 if callback_url:
                     print(f"🔗 发现回调URL: {callback_url}")
-                    print(f"⚠️  服务器环境暂不支持回调URL处理")
+                    print(f"🚀 尝试访问回调URL获取token...")
 
+                    # 访问回调URL获取token
+                    callback_result = _get_token_from_callback(session, callback_url)
+                    if callback_result:
+                        callback_token, callback_auc = callback_result
+                        print(f"✅ 从回调URL成功获取token")
+
+                        # 更新AUC token
+                        if callback_auc:
+                            AUC_TOKEN = callback_auc
+                            print(f"✅ 同时从回调获取到AUC token")
+
+                        return callback_token
+                    else:
+                        print(f"❌ 从回调URL获取token失败")
+
+                print(f"🔍 完整result内容: {result_data}")
                 return None
         else:
             print(f"❌ 登录失败: {result.get('message', '未知错误')}")
@@ -195,6 +220,79 @@ def get_new_token():
 
     except Exception as e:
         print(f"❌ 获取新token失败: {e}")
+        return None
+
+
+def _get_token_from_callback(session, callback_url):
+    """从回调URL获取token和AUC token"""
+    try:
+        print(f"📡 访问回调URL: {callback_url}")
+
+        # 访问回调URL
+        response = session.get(callback_url, timeout=30, allow_redirects=True)
+
+        print(f"📊 回调响应状态: {response.status_code}")
+
+        if response.status_code == 200:
+            content = response.text
+            print(f"📄 回调响应长度: {len(content)}")
+
+            # 获取cookies
+            cookies = {}
+            if hasattr(response, 'cookies'):
+                for cookie in response.cookies:
+                    cookies[cookie.name] = cookie.value
+                print(f"🍪 回调获取到cookies: {list(cookies.keys())}")
+
+            # 尝试从响应中提取token
+            # 方法1: 查找JSON格式的token
+            import json
+            import re
+
+            # 查找可能的JSON对象
+            json_pattern = r'\{[^{}]*"token"[^{}]*\}'
+            json_matches = re.findall(json_pattern, content)
+
+            for match in json_matches:
+                try:
+                    data = json.loads(match)
+                    if 'token' in data and data['token'] and len(data['token']) > 50:
+                        token = data['token']
+                        auc_token = cookies.get('auc', '')
+                        print(f"✅ 从JSON中找到token: {token[:50]}...")
+                        return (token, auc_token)
+                except:
+                    continue
+
+            # 方法2: 查找直接的token字符串
+            token_pattern = r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
+            token_matches = re.findall(token_pattern, content)
+
+            for token in token_matches:
+                if len(token) > 100:  # JWT token通常很长
+                    auc_token = cookies.get('auc', '')
+                    print(f"✅ 从内容中找到JWT token: {token[:50]}...")
+                    return (token, auc_token)
+
+            # 方法3: 查找cookies中的token
+            # 检查常见的token cookie名称
+            token_cookie_names = ['aut', 'token', 'access_token', 'jwt']
+            for cookie_name in token_cookie_names:
+                if cookie_name in cookies and len(cookies[cookie_name]) > 50:
+                    token = cookies[cookie_name]
+                    auc_token = cookies.get('auc', '')
+                    print(f"✅ 从cookie '{cookie_name}' 中找到token: {token[:50]}...")
+                    return (token, auc_token)
+
+            print(f"⚠️  未在回调响应中找到有效token")
+            print(f"📄 响应内容预览: {content[:200]}...")
+            return None
+        else:
+            print(f"❌ 回调URL访问失败，状态码: {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"❌ 访问回调URL异常: {e}")
         return None
 
 
@@ -335,7 +433,7 @@ def get_mail_list(page_count=50):
 
 
 def _get_mail_list_internal(page_count=50):
-    """内部函数：获取邮件列表"""
+    """内部函数：获取邮件列表（修复：添加cookies支持）"""
     try:
         params = {
             'Folder': 'Inbox',
@@ -346,7 +444,26 @@ def _get_mail_list_internal(page_count=50):
             'traceId': generate_trace_id()
         }
 
-        response = requests.get(MAIL_LIST_URL, params=params, headers=DEFAULT_HEADERS, timeout=30)
+        # 使用session来设置cookies（关键修复！）
+        session = requests.Session()
+
+        # 设置cookies - 这是关键！
+        cookies = {
+            'aut': CURRENT_TOKEN,
+            'jwt_token': CURRENT_TOKEN,
+            'account': MAILBOX.replace('@', '%40'),
+            'uid': '71546bfb-2d17-3a66-8b41-1ca358aee8f6'  # 用户ID
+        }
+
+        # 如果有AUC token，也添加到cookies中
+        if AUC_TOKEN:
+            cookies['auc'] = AUC_TOKEN
+            print(f"🍪 使用AUC token: {AUC_TOKEN[:50]}...")
+
+        for name, value in cookies.items():
+            session.cookies.set(name, value)
+
+        response = session.get(MAIL_LIST_URL, params=params, headers=DEFAULT_HEADERS, timeout=30)
         response.raise_for_status()
         return response.json()
 
