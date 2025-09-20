@@ -10,7 +10,14 @@ import json
 import uuid
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# 中国时区
+CHINA_TZ = timezone(timedelta(hours=8))
+
+def get_china_time():
+    """获取中国时区的当前时间"""
+    return datetime.now(CHINA_TZ)
 
 # 配置信息（直接内嵌，避免复杂的导入）
 CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6ImQ1NWU3YjE1LTg5NWYtNDdhMi04MGFkLTlkNzEzZDExMzgzYSIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzAyMTg0LCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODMwOTM4NCwibmJmIjoxNzU4MzAyMTI0fQ.P7WbR_g5LAYX75u8MQ_mDTYNb0cLOq4jYBTJ-mXotOI"
@@ -338,7 +345,7 @@ def get_verification_code_with_retry(email_input, sent_time=None, time_window_mi
         str: 验证码，如果未找到则返回None
     """
     if sent_time is None:
-        sent_time = datetime.now()
+        sent_time = get_china_time()
     
     email_prefix = extract_email_prefix(email_input)
     start_time = sent_time - timedelta(minutes=time_window_minutes)

@@ -8,9 +8,16 @@ Vercel API函数：获取验证码
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
+
+# 中国时区
+CHINA_TZ = timezone(timedelta(hours=8))
+
+def get_china_time():
+    """获取中国时区的当前时间"""
+    return datetime.now(CHINA_TZ)
 
 # 添加核心模块路径
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'core'))
@@ -53,7 +60,7 @@ class handler(BaseHTTPRequestHandler):
             # 调用验证码获取函数
             result = get_verification_code_with_retry(
                 email_input=email_input,
-                sent_time=datetime.now(),
+                sent_time=get_china_time(),
                 time_window_minutes=time_window,
                 max_retries=max_retries,
                 retry_interval=retry_interval
@@ -65,7 +72,7 @@ class handler(BaseHTTPRequestHandler):
                     "success": True,
                     "verification_code": result,
                     "email": email_input,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": get_china_time().isoformat(),
                     "message": "验证码获取成功"
                 }
             else:
@@ -74,7 +81,7 @@ class handler(BaseHTTPRequestHandler):
                     "success": False,
                     "verification_code": None,
                     "email": email_input,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": get_china_time().isoformat(),
                     "message": "未找到验证码，请确认邮箱地址正确且验证码邮件已发送"
                 }
 
@@ -116,7 +123,7 @@ class handler(BaseHTTPRequestHandler):
             # 调用验证码获取函数
             result = get_verification_code_with_retry(
                 email_input=email_input,
-                sent_time=datetime.now(),
+                sent_time=get_china_time(),
                 time_window_minutes=time_window,
                 max_retries=max_retries,
                 retry_interval=retry_interval
@@ -128,7 +135,7 @@ class handler(BaseHTTPRequestHandler):
                     "success": True,
                     "verification_code": result,
                     "email": email_input,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": get_china_time().isoformat(),
                     "message": "验证码获取成功"
                 }
             else:
@@ -137,7 +144,7 @@ class handler(BaseHTTPRequestHandler):
                     "success": False,
                     "verification_code": None,
                     "email": email_input,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": get_china_time().isoformat(),
                     "message": "未找到验证码，请确认邮箱地址正确且验证码邮件已发送"
                 }
 
@@ -174,6 +181,6 @@ class handler(BaseHTTPRequestHandler):
         error_data = {
             "success": False,
             "error": error_message,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": get_china_time().isoformat()
         }
         self._send_json_response(status_code, error_data)

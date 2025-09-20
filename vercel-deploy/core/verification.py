@@ -7,7 +7,14 @@
 
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# 中国时区
+CHINA_TZ = timezone(timedelta(hours=8))
+
+def get_china_time():
+    """获取中国时区的当前时间"""
+    return datetime.now(CHINA_TZ)
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -79,7 +86,7 @@ def find_verification_mail_by_alias(email_prefix, sent_time=None, time_window_mi
         dict: 包含验证码和邮件信息的字典，如果未找到则返回None
     """
     if sent_time is None:
-        sent_time = datetime.now()
+        sent_time = get_china_time()
     
     # 计算时间窗口
     start_time = sent_time - timedelta(minutes=time_window_minutes)
