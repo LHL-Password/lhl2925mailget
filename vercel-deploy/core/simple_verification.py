@@ -97,29 +97,39 @@ def is_token_valid():
 
 
 def get_new_token():
-    """获取新的token"""
+    """获取新的token（使用与login_2925.py相同的逻辑）"""
     try:
         # 使用固定数据登录
         trace_id = "81de9b3ea212"
         device_uid = "5a7cdb83-822d-4e42-8487-7f90febb3311"
         device_id = "394a7110-44d8-11f0-99db-2d8fcb53f12a"
 
-        # 请求URL
-        url = f"https://www.2925.com/mailv2/auth/weblogin?traceId={trace_id}"
+        # 创建session（关键差异1）
+        session = requests.Session()
 
-        # 请求头
-        headers = {
+        # 设置完整的请求头（关键差异2）
+        session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
             'Accept': '*/*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',  # 关键差异3
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'Origin': 'https://www.2925.com',
             'Referer': 'https://www.2925.com/login/',
+            'Sec-Ch-Ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Microsoft Edge";v="140"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
             'X-Requested-With': 'XMLHttpRequest',
-            'deviceuid': device_uid,
+            'deviceuid': device_uid,  # 关键差异4：设置在headers中
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
-        }
+        })
+
+        # 请求URL
+        url = f"https://www.2925.com/mailv2/auth/weblogin?traceId={trace_id}"
 
         # 请求数据
         from urllib.parse import urlencode
@@ -131,10 +141,9 @@ def get_new_token():
             'rememberLogin': 'false'
         }
 
-        # 发送请求
-        response = requests.post(
+        # 发送请求（使用session）
+        response = session.post(
             url,
-            headers=headers,
             data=urlencode(data, doseq=True),
             timeout=30
         )
@@ -149,24 +158,35 @@ def get_new_token():
         result_data = result.get('result', {})
         print(f"🔍 result字段内容: {list(result_data.keys()) if result_data else 'None'}")
 
+        # 处理cookies（关键差异5）
+        cookies = {}
+        if hasattr(response, 'cookies'):
+            for cookie in response.cookies:
+                cookies[cookie.name] = cookie.value
+            print(f"🍪 获取到cookies: {list(cookies.keys())}")
+
         if result.get('code') == 200 and result.get('result', {}).get('success'):
-            # 尝试不同的token字段名
-            new_token = None
+            # 获取token和refresh_token
+            token = result_data.get('token', '').strip()
+            refresh_token = result_data.get('refreashToken', '').strip()  # 注意拼写
 
-            # 尝试常见的token字段名
-            token_fields = ['token', 'accessToken', 'access_token', 'jwt', 'authToken']
-            for field in token_fields:
-                if field in result_data and result_data[field]:
-                    new_token = result_data[field]
-                    print(f"✅ 在字段 '{field}' 中找到token")
-                    break
+            print(f"🔍 Token: '{token[:50]}...' (长度: {len(token)})" if token else "🔍 Token: 空")
+            print(f"🔍 RefreshToken: '{refresh_token[:50]}...' (长度: {len(refresh_token)})" if refresh_token else "🔍 RefreshToken: 空")
 
-            if new_token:
-                print(f"✅ 成功获取新token: {new_token[:50]}...")
-                return new_token
+            # 检查token有效性
+            if token and len(token) > 50:  # JWT token通常很长
+                print(f"✅ 成功获取有效token")
+                return token
             else:
-                print(f"❌ 登录成功但未找到token字段")
+                print(f"❌ Token无效或为空")
                 print(f"🔍 完整result内容: {result_data}")
+
+                # 如果有回调URL，记录但不处理（服务器环境可能不支持）
+                callback_url = result_data.get('url')
+                if callback_url:
+                    print(f"🔗 发现回调URL: {callback_url}")
+                    print(f"⚠️  服务器环境暂不支持回调URL处理")
+
                 return None
         else:
             print(f"❌ 登录失败: {result.get('message', '未知错误')}")
