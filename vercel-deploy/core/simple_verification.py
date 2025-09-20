@@ -99,26 +99,22 @@ def is_token_valid():
         return False
 
 
-def get_new_token():
-    """获取新的token（使用与login_2925.py相同的逻辑）"""
-    try:
-        # 使用固定数据登录
-        trace_id = "81de9b3ea212"
-        device_uid = "5a7cdb83-822d-4e42-8487-7f90febb3311"
-        device_id = "394a7110-44d8-11f0-99db-2d8fcb53f12a"
+# 内嵌Login2925类的简化版本（与原版完全一致的逻辑）
+class Login2925:
+    def __init__(self):
+        self.base_url = "https://www.2925.com"
+        self.login_url = f"{self.base_url}/mailv2/auth/weblogin"
+        self.session = requests.Session()
 
-        # 创建session（关键差异1）
-        session = requests.Session()
-
-        # 设置完整的请求头（关键差异2）
-        session.headers.update({
+        # 设置默认请求头（与原版完全一致）
+        self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
             'Accept': '*/*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',  # 关键差异3
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Origin': 'https://www.2925.com',
-            'Referer': 'https://www.2925.com/login/',
+            'Origin': self.base_url,
+            'Referer': f'{self.base_url}/login/',
             'Sec-Ch-Ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Microsoft Edge";v="140"',
             'Sec-Ch-Ua-Mobile': '?0',
             'Sec-Ch-Ua-Platform': '"Windows"',
@@ -126,179 +122,140 @@ def get_new_token():
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Site': 'same-origin',
             'X-Requested-With': 'XMLHttpRequest',
-            'deviceuid': device_uid,  # 关键差异4：设置在headers中
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
         })
 
-        # 请求URL
-        url = f"https://www.2925.com/mailv2/auth/weblogin?traceId={trace_id}"
+    def generate_trace_id(self):
+        """生成traceId"""
+        return str(uuid.uuid4()).replace('-', '')[:12]
 
-        # 请求数据
-        from urllib.parse import urlencode
-        data = {
-            'uname': USERNAME,
-            'rsapwd': RSA_PASSWORD,
-            'deviceIds[]': device_id,
-            'pass': '',
-            'rememberLogin': 'false'
-        }
+    def generate_device_id(self):
+        """生成设备ID"""
+        return str(uuid.uuid4())
 
-        # 发送请求（使用session）
-        response = session.post(
-            url,
-            data=urlencode(data, doseq=True),
-            timeout=30
-        )
+    def login(self, username, password, rsa_password=None, use_fixed_data=False):
+        """
+        登录获取token（与原版Login2925完全一致的逻辑）
 
-        response.raise_for_status()
-        result = response.json()
+        Args:
+            username (str): 用户名/邮箱
+            password (str): 密码
+            rsa_password (str): RSA加密后的密码，如果提供则使用此参数
+            use_fixed_data (bool): 是否使用固定的设备ID和traceID
 
-        # 检查登录结果
-        print(f"🔍 登录响应: code={result.get('code')}, success={result.get('result', {}).get('success')}")
-
-        # 添加详细的调试信息
-        result_data = result.get('result', {})
-        print(f"🔍 result字段内容: {list(result_data.keys()) if result_data else 'None'}")
-
-        # 处理cookies（关键差异5）
-        cookies = {}
-        if hasattr(response, 'cookies'):
-            for cookie in response.cookies:
-                cookies[cookie.name] = cookie.value
-            print(f"🍪 获取到cookies: {list(cookies.keys())}")
-
-        if result.get('code') == 200 and result.get('result', {}).get('success'):
-            # 获取token和refresh_token
-            token = result_data.get('token', '').strip()
-            refresh_token = result_data.get('refreashToken', '').strip()  # 注意拼写
-
-            print(f"🔍 Token: '{token[:50]}...' (长度: {len(token)})" if token else "🔍 Token: 空")
-            print(f"🔍 RefreshToken: '{refresh_token[:50]}...' (长度: {len(refresh_token)})" if refresh_token else "🔍 RefreshToken: 空")
-
-            # 检查token有效性
-            if token and len(token) > 50:  # JWT token通常很长
-                print(f"✅ 成功获取有效token")
-
-                # 同时更新AUC token（从cookies中获取）
-                global AUC_TOKEN
-                if 'auc' in cookies:
-                    AUC_TOKEN = cookies['auc']
-                    print(f"✅ 同时获取到AUC token")
-
-                return token
+        Returns:
+            dict: 登录结果，包含token等信息
+        """
+        try:
+            if use_fixed_data:
+                # 使用提供的固定数据
+                trace_id = "81de9b3ea212"
+                device_uid = "5a7cdb83-822d-4e42-8487-7f90febb3311"
+                device_id = "394a7110-44d8-11f0-99db-2d8fcb53f12a"
             else:
-                print(f"❌ Token无效或为空")
+                # 生成随机参数
+                trace_id = self.generate_trace_id()
+                device_uid = self.generate_device_id()
+                device_id = self.generate_device_id()
 
-                # 如果有回调URL，尝试访问获取真正的token
-                callback_url = result_data.get('url')
-                if callback_url:
-                    print(f"🔗 发现回调URL: {callback_url}")
-                    print(f"🚀 尝试访问回调URL获取token...")
+            # 设置设备ID头
+            self.session.headers['deviceuid'] = device_uid
 
-                    # 访问回调URL获取token
-                    callback_result = _get_token_from_callback(session, callback_url)
-                    if callback_result:
-                        callback_token, callback_auc = callback_result
-                        print(f"✅ 从回调URL成功获取token")
+            # 构建登录URL
+            login_url_with_trace = f"{self.login_url}?traceId={trace_id}"
 
-                        # 更新AUC token
-                        if callback_auc:
-                            AUC_TOKEN = callback_auc
-                            print(f"✅ 同时从回调获取到AUC token")
+            # 构建请求数据
+            login_data = {
+                'uname': username,
+                'rsapwd': rsa_password if rsa_password else password,
+                'deviceIds[]': device_id,
+                'pass': '',
+                'rememberLogin': 'false'
+            }
 
-                        return callback_token
-                    else:
-                        print(f"❌ 从回调URL获取token失败")
+            # 发送登录请求
+            print(f"正在登录用户: {username}")
+            print(f"请求URL: {login_url_with_trace}")
 
-                print(f"🔍 完整result内容: {result_data}")
-                return None
-        else:
-            print(f"❌ 登录失败: {result.get('message', '未知错误')}")
-            print(f"🔍 完整响应: {result}")
-            return None
+            from urllib.parse import urlencode
+            response = self.session.post(
+                login_url_with_trace,
+                data=urlencode(login_data, doseq=True),
+                timeout=30
+            )
 
-    except Exception as e:
-        print(f"❌ 获取新token失败: {e}")
-        return None
+            # 检查响应状态
+            response.raise_for_status()
+
+            # 解析响应
+            result = response.json()
+
+            if result.get('code') == 200 and result.get('result', {}).get('success'):
+                print("登录成功!")
+
+                # 获取登录结果数据
+                result_data = result.get('result', {})
+                token = result_data.get('token')
+                refresh_token = result_data.get('refreashToken')  # 注意这里是 refreashToken，不是 refreshToken
+                app_info = result_data.get('appInfo', {})
+
+                print(f"Token: {token}")
+                print(f"Refresh Token: {refresh_token}")
+                print(f"用户信息: {app_info.get('name', '未知')}")
+
+                # 从响应头中获取cookies
+                cookies = {}
+                if hasattr(response, 'cookies'):
+                    for cookie in response.cookies:
+                        cookies[cookie.name] = cookie.value
+
+                return {
+                    'success': True,
+                    'token': token,
+                    'refresh_token': refresh_token,
+                    'user_info': app_info,
+                    'cookies': cookies,
+                    'full_response': result
+                }
+            else:
+                print(f"登录失败: {result.get('message', '未知错误')}")
+                return {
+                    'success': False,
+                    'message': result.get('message', '未知错误'),
+                    'full_response': result
+                }
+
+        except requests.exceptions.RequestException as e:
+            print(f"网络请求错误: {e}")
+            return {
+                'success': False,
+                'error': f"网络请求错误: {e}"
+            }
+        except json.JSONDecodeError as e:
+            print(f"JSON解析错误: {e}")
+            return {
+                'success': False,
+                'error': f"JSON解析错误: {e}"
+            }
+        except Exception as e:
+            print(f"未知错误: {e}")
+            return {
+                'success': False,
+                'error': f"未知错误: {e}"
+            }
 
 
-def _get_token_from_callback(session, callback_url):
-    """从回调URL获取token和AUC token"""
-    try:
-        print(f"📡 访问回调URL: {callback_url}")
 
-        # 访问回调URL
-        response = session.get(callback_url, timeout=30, allow_redirects=True)
 
-        print(f"📊 回调响应状态: {response.status_code}")
 
-        if response.status_code == 200:
-            content = response.text
-            print(f"📄 回调响应长度: {len(content)}")
 
-            # 获取cookies
-            cookies = {}
-            if hasattr(response, 'cookies'):
-                for cookie in response.cookies:
-                    cookies[cookie.name] = cookie.value
-                print(f"🍪 回调获取到cookies: {list(cookies.keys())}")
-
-            # 尝试从响应中提取token
-            # 方法1: 查找JSON格式的token
-            import json
-            import re
-
-            # 查找可能的JSON对象
-            json_pattern = r'\{[^{}]*"token"[^{}]*\}'
-            json_matches = re.findall(json_pattern, content)
-
-            for match in json_matches:
-                try:
-                    data = json.loads(match)
-                    if 'token' in data and data['token'] and len(data['token']) > 50:
-                        token = data['token']
-                        auc_token = cookies.get('auc', '')
-                        print(f"✅ 从JSON中找到token: {token[:50]}...")
-                        return (token, auc_token)
-                except:
-                    continue
-
-            # 方法2: 查找直接的token字符串
-            token_pattern = r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
-            token_matches = re.findall(token_pattern, content)
-
-            for token in token_matches:
-                if len(token) > 100:  # JWT token通常很长
-                    auc_token = cookies.get('auc', '')
-                    print(f"✅ 从内容中找到JWT token: {token[:50]}...")
-                    return (token, auc_token)
-
-            # 方法3: 查找cookies中的token
-            # 检查常见的token cookie名称
-            token_cookie_names = ['aut', 'token', 'access_token', 'jwt']
-            for cookie_name in token_cookie_names:
-                if cookie_name in cookies and len(cookies[cookie_name]) > 50:
-                    token = cookies[cookie_name]
-                    auc_token = cookies.get('auc', '')
-                    print(f"✅ 从cookie '{cookie_name}' 中找到token: {token[:50]}...")
-                    return (token, auc_token)
-
-            print(f"⚠️  未在回调响应中找到有效token")
-            print(f"📄 响应内容预览: {content[:200]}...")
-            return None
-        else:
-            print(f"❌ 回调URL访问失败，状态码: {response.status_code}")
-            return None
-
-    except Exception as e:
-        print(f"❌ 访问回调URL异常: {e}")
-        return None
 
 
 def auto_refresh_token_if_needed():
     """
-    自动检测token是否过期，如果过期则更新token
+    自动检测token是否过期，如果过期则调用Login2925更新token
+    （与get_verification_by_alias_v2.py完全一致的逻辑）
 
     Returns:
         bool: True表示token有效或更新成功，False表示更新失败
@@ -313,23 +270,38 @@ def auto_refresh_token_if_needed():
 
         print("⚠️  检测到Token已过期，正在自动更新...")
 
-        # 获取新token
-        new_token = get_new_token()
+        # 创建登录实例（与get_verification_by_alias_v2.py完全一致）
+        login_client = Login2925()
 
-        print(f"🔍 调试信息: new_token = {new_token[:50] if new_token else 'None'}...")
+        # 使用配置文件中的登录信息（与get_verification_by_alias_v2.py完全一致）
+        username = USERNAME  # 从配置获取
+        password = "lhl1214652981"  # 这个应该从安全的地方获取，比如环境变量
+        rsa_password = "e43e00e9dac20bb7d39e00ed9ddd87fd"  # 这个也应该从安全的地方获取
 
-        if new_token:
-            # 更新全局token
-            global CURRENT_TOKEN, DEFAULT_HEADERS
-            CURRENT_TOKEN = new_token
-            DEFAULT_HEADERS['Authorization'] = f'Bearer {new_token}'
+        print(f"� 正在使用账户 {username} 重新登录...")
 
-            # 验证更新是否成功
-            print(f"🔍 更新后的token: {CURRENT_TOKEN[:50]}...")
+        # 执行登录（与get_verification_by_alias_v2.py完全一致的参数）
+        result = login_client.login(username, password, rsa_password, use_fixed_data=True)
+
+        if result['success']:
             print("✅ Token自动更新成功！")
+
+            # 获取新token并更新全局变量
+            new_token = result.get('token')
+            if new_token:
+                CURRENT_TOKEN = new_token
+                DEFAULT_HEADERS['Authorization'] = f'Bearer {new_token}'
+
+                # 同时更新AUC token（从cookies中获取）
+                cookies = result.get('cookies', {})
+                global AUC_TOKEN
+                if 'auc' in cookies:
+                    AUC_TOKEN = cookies['auc']
+                    print(f"✅ 同时获取到AUC token")
+
             return True
         else:
-            print("❌ Token自动更新失败 - 未获取到有效token")
+            print(f"❌ Token自动更新失败: {result.get('message', result.get('error'))}")
             return False
 
     except Exception as e:
