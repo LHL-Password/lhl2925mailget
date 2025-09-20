@@ -145,10 +145,29 @@ def get_new_token():
         # 检查登录结果
         print(f"🔍 登录响应: code={result.get('code')}, success={result.get('result', {}).get('success')}")
 
+        # 添加详细的调试信息
+        result_data = result.get('result', {})
+        print(f"🔍 result字段内容: {list(result_data.keys()) if result_data else 'None'}")
+
         if result.get('code') == 200 and result.get('result', {}).get('success'):
-            new_token = result['result']['token']
-            print(f"✅ 成功获取新token: {new_token[:50] if new_token else 'None'}...")
-            return new_token
+            # 尝试不同的token字段名
+            new_token = None
+
+            # 尝试常见的token字段名
+            token_fields = ['token', 'accessToken', 'access_token', 'jwt', 'authToken']
+            for field in token_fields:
+                if field in result_data and result_data[field]:
+                    new_token = result_data[field]
+                    print(f"✅ 在字段 '{field}' 中找到token")
+                    break
+
+            if new_token:
+                print(f"✅ 成功获取新token: {new_token[:50]}...")
+                return new_token
+            else:
+                print(f"❌ 登录成功但未找到token字段")
+                print(f"🔍 完整result内容: {result_data}")
+                return None
         else:
             print(f"❌ 登录失败: {result.get('message', '未知错误')}")
             print(f"🔍 完整响应: {result}")
