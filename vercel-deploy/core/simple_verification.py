@@ -201,10 +201,25 @@ def auto_refresh_token_if_needed():
 
 
 def extract_email_prefix(email_input):
-    """从邮箱地址中提取前缀"""
+    """
+    从邮箱地址或前缀中提取前6位作为匹配前缀
+
+    Args:
+        email_input (str): 邮箱前缀或完整邮箱地址
+
+    Returns:
+        str: 提取的前6位前缀
+    """
     if '@' in email_input:
-        return email_input.split('@')[0]
-    return email_input
+        # 如果输入的是完整邮箱地址，提取@前面的部分，然后取前6位
+        prefix = email_input.split('@')[0][:6]
+        print(f"📧 从完整邮箱地址提取前缀: '{email_input}' -> '{prefix}'")
+        return prefix
+    else:
+        # 如果输入的是前缀，直接使用（取前6位）
+        prefix = email_input[:6]
+        print(f"📧 使用输入的前缀: '{prefix}'")
+        return prefix
 
 
 def extract_verification_code(text):
@@ -425,10 +440,17 @@ def get_verification_code_with_retry(email_input, sent_time=None, time_window_mi
             body_text = result.get('bodyText', '')
             body_html = result.get('bodyHtmlText', '')
 
-            # 检查是否包含指定的邮箱前缀
+            # 检查是否包含指定的邮箱前缀（按照v2版本的逻辑）
+            # 只取前6位进行匹配，并查找特定的alias模式
+            email_prefix_6 = email_prefix[:6]
+
+            # 在邮件内容中查找特定的alias模式
+            # 匹配模式: "This email was sent to the alias 'xyeqwe"
+            alias_pattern = f"This email was sent to the alias '{email_prefix_6}"
             all_content = f"{subject} {body_text} {body_html}"
-            if email_prefix not in all_content:
-                print(f"    ⏭️  邮件不包含前缀 '{email_prefix}'，跳过")
+
+            if alias_pattern not in all_content:
+                print(f"    ⏭️  邮件不包含前缀 '{email_prefix_6}' 的alias模式，跳过")
                 continue
 
             # 判断是否为验证码邮件
