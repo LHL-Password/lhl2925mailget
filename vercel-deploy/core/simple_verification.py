@@ -387,13 +387,14 @@ def get_verification_code_with_retry(email_input, sent_time=None, time_window_mi
             sender = mail.get('sender', {}).get('senderDisplay', '未知发件人')
             create_time = mail.get('createTime', '0')
             
-            # 转换时间戳为datetime对象
+            # 转换时间戳为datetime对象（带时区信息）
             try:
-                mail_time = datetime.fromtimestamp(int(create_time) / 1000)
+                # 创建带时区信息的datetime对象
+                mail_time = datetime.fromtimestamp(int(create_time) / 1000, tz=CHINA_TZ)
                 readable_time = mail_time.strftime('%Y-%m-%d %H:%M:%S')
             except:
                 continue
-            
+
             # 检查时间窗口
             if not (start_time <= mail_time <= end_time):
                 continue
