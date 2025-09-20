@@ -223,7 +223,7 @@
             
             try {
                 // 调用API
-                const response = await fetch(`/api/get-verification?email=${encodeURIComponent(email)}&time_window=10&max_retries=3&retry_interval=20`);
+                const response = await fetch(`/api/index?email=${encodeURIComponent(email)}&time_window=10&max_retries=3&retry_interval=20`);
                 const data = await response.json();
                 
                 if (data.success && data.verification_code) {
