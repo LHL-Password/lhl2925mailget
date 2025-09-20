@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮件验证码获取工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .verification-code {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            letter-spacing: 3px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .example {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .example strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 邮件验证码获取</h1>
+            <p>输入邮箱地址，自动获取最新验证码</p>
+        </div>
+
+        <form id="verificationForm">
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input 
+                    type="text" 
+                    id="email" 
+                    name="email" 
+                    placeholder="请输入邮箱地址或前缀"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                🔍 获取验证码
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在搜索验证码邮件...</p>
+        </div>
+
+        <div class="result" id="result">
+            <div id="resultContent"></div>
+        </div>
+
+        <div class="example">
+            <strong>使用说明：</strong><br>
+            • 支持完整邮箱地址：test123@2925.com<br>
+            • 支持邮箱前缀：test123<br>
+            • 系统会自动搜索最近10分钟内的验证码邮件
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('verificationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (!email) {
+                showResult('error', '请输入邮箱地址');
+                return;
+            }
+            
+            // 显示加载状态
+            submitBtn.disabled = true;
+            submitBtn.textContent = '搜索中...';
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                // 调用API
+                const response = await fetch(`/api/get-verification?email=${encodeURIComponent(email)}&time_window=10&max_retries=3&retry_interval=20`);
+                const data = await response.json();
+                
+                if (data.success && data.verification_code) {
+                    // 成功获取验证码
+                    resultContent.innerHTML = `
+                        <h3>✅ 验证码获取成功！</h3>
+                        <div class="verification-code">${data.verification_code}</div>
+                        <p><strong>邮箱：</strong>${data.email}</p>
+                        <p><strong>时间：</strong>${new Date(data.timestamp).toLocaleString()}</p>
+                    `;
+                    showResult('success');
+                } else {
+                    // 未找到验证码
+                    resultContent.innerHTML = `
+                        <h3>❌ 未找到验证码</h3>
+                        <p>${data.message || '请确认邮箱地址正确且验证码邮件已发送'}</p>
+                        <p><strong>邮箱：</strong>${data.email || email}</p>
+                        <p><strong>建议：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>检查邮箱地址是否正确</li>
+                            <li>确认验证码邮件已发送</li>
+                            <li>稍等片刻后重试</li>
+                        </ul>
+                    `;
+                    showResult('error');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                resultContent.innerHTML = `
+                    <h3>❌ 请求失败</h3>
+                    <p>网络错误或服务器异常，请稍后重试</p>
+                    <p><strong>错误信息：</strong>${error.message}</p>
+                `;
+                showResult('error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔍 获取验证码';
+                loading.style.display = 'none';
+            }
+        });
+        
+        function showResult(type, message) {
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (message) {
+                resultContent.innerHTML = `<p>${message}</p>`;
+            }
+            
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
