@@ -20,10 +20,10 @@ def get_china_time():
     return datetime.now(CHINA_TZ)
 
 # 配置信息（直接内嵌，避免复杂的导入）
-CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6Ijk2ZjkxZDYwLWJiZTktNDIxOC05MThiLTA5NDI3N2VhYmViYyIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzU2ODYyLCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODM2NDA2MiwibmJmIjoxNzU4MzU2ODAyfQ.aMfMHRBcg3_dHlTNgrI_ZpG4fYpv6eLnoYN1uaT_Nrc"
+CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6ImQyNWRkNWY1LTY5NTktNDk0OS1iZTJhLWZlZGRlZWE3YWQ1OSIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzcwNTkwLCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODM3Nzc5MCwibmJmIjoxNzU4MzcwNTMwfQ.-9Knnrtbb3ZpA40lPyXuLp53zYWWFfU_Xocdj2gpBZE"
 
 # AUC token (从登录cookies中获取，用于邮件API请求)
-AUC_TOKEN = ""
+AUC_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZWZyZXNoX2FnZW50IjoiOWdKekZBWG5GOGlkSUVvRXVXZTdKVUhhUWhJTXVoYVFPUDFnbEJiT1M3dz0iLCJncmFudF90eXBlIjoiV2ViQ2xpZW50IiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6ImQyNWRkNWY1LTY5NTktNDk0OS1iZTJhLWZlZGRlZWE3YWQ1OSIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzcwNTkwLCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODQxMzc5MCwibmJmIjoxNzU4MzcwNTkwfQ.hwYoR3pPNjrptEi8jAzUn4a1WuuyOx79IJa9FSXdz8M"
 
 # 登录配置信息
 USERNAME = "li1214652981@2925.com"
@@ -106,14 +106,16 @@ class Login2925:
         self.login_url = f"{self.base_url}/mailv2/auth/weblogin"
         self.session = requests.Session()
 
-        # 设置默认请求头（与原版完全一致）
+        # 设置默认请求头（与debug_login.py完全一致）
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
             'Accept': '*/*',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
             'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+            'Cache-Control': 'no-cache',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'Origin': self.base_url,
+            'Pragma': 'no-cache',
+            'Priority': 'u=1, i',
             'Referer': f'{self.base_url}/login/',
             'Sec-Ch-Ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Microsoft Edge";v="140"',
             'Sec-Ch-Ua-Mobile': '?0',
@@ -121,9 +123,8 @@ class Login2925:
             'Sec-Fetch-Dest': 'empty',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Site': 'same-origin',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
+            'X-Requested-With': 'XMLHttpRequest'
         })
 
     def generate_trace_id(self):
@@ -177,6 +178,7 @@ class Login2925:
             # 发送登录请求
             print(f"正在登录用户: {username}")
             print(f"请求URL: {login_url_with_trace}")
+            print(f"🔍 登录数据: {login_data}")
 
             from urllib.parse import urlencode
             response = self.session.post(
@@ -188,21 +190,88 @@ class Login2925:
             # 检查响应状态
             response.raise_for_status()
 
-            # 解析响应
-            result = response.json()
+            # 打印响应头信息以便调试
+            print(f"🔍 响应状态码: {response.status_code}")
+            print(f"🔍 响应头: {dict(response.headers)}")
+            print(f"🔍 响应cookies: {dict(response.cookies)}")
 
-            if result.get('code') == 200 and result.get('result', {}).get('success'):
-                print("登录成功!")
+            # 检查响应内容类型
+            content_type = response.headers.get('content-type', '').lower()
+            print(f"🔍 响应内容类型: {content_type}")
 
-                # 获取登录结果数据
+            # 如果返回的是HTML而不是JSON，说明请求有问题
+            if 'text/html' in content_type:
+                print("❌ 服务器返回HTML页面而不是JSON，可能是请求参数或URL有误")
+                print(f"📄 响应内容预览: {response.text[:200]}...")
+                return {
+                    'success': False,
+                    'error': '服务器返回HTML页面而不是JSON响应',
+                    'response_preview': response.text[:500]
+                }
+
+            # 解析JSON响应
+            try:
+                result = response.json()
+                print(f"🔍 完整result内容: {result}")
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON解析失败: {e}")
+                print(f"📄 响应内容: {response.text[:500]}...")
+                return {
+                    'success': False,
+                    'error': f'JSON解析失败: {e}',
+                    'response_text': response.text[:500]
+                }
+
+            # 检查登录是否成功 - 支持两种响应格式
+            success = False
+            token = None
+            refresh_token = None
+            app_info = {}
+
+            # 格式1: 新版API响应格式 {"success": true, "resCode": 200, "token": "..."}
+            if result.get('success') and result.get('resCode') == 200:
+                success = True
+                token = result.get('token')
+                refresh_token = result.get('refreashToken')
+                app_info = result.get('appInfo', {})
+                print("✅ 检测到新版API响应格式")
+
+            # 格式2: 旧版API响应格式 {"code": 200, "result": {"success": true, "token": "..."}}
+            elif result.get('code') == 200 and result.get('result', {}).get('success'):
+                success = True
                 result_data = result.get('result', {})
                 token = result_data.get('token')
-                refresh_token = result_data.get('refreashToken')  # 注意这里是 refreashToken，不是 refreshToken
+                refresh_token = result_data.get('refreashToken')
                 app_info = result_data.get('appInfo', {})
+                print("✅ 检测到旧版API响应格式")
+
+            if success:
+                print("登录成功!")
 
                 print(f"Token: {token}")
                 print(f"Refresh Token: {refresh_token}")
                 print(f"用户信息: {app_info.get('name', '未知')}")
+
+                # 检查token是否为空
+                if not token:
+                    print("❌ 登录成功但未找到token字段")
+                    print(f"🔍 完整result内容: {result}")
+
+                    # 尝试从其他可能的字段获取token
+                    possible_token_fields = ['accessToken', 'access_token', 'authToken', 'auth_token', 'jwt', 'bearerToken']
+                    for field in possible_token_fields:
+                        if result.get(field):
+                            token = result.get(field)
+                            print(f"✅ 从字段 '{field}' 找到token: {token[:50]}...")
+                            break
+
+                    if not token:
+                        print("❌ 在所有可能的字段中都未找到token")
+                        # 如果仍然没有token，但登录成功，可能需要从cookies或其他地方获取
+                        print("🔍 尝试从响应cookies中查找token...")
+                        for cookie_name, cookie_value in response.cookies.items():
+                            if 'token' in cookie_name.lower() or 'auth' in cookie_name.lower():
+                                print(f"🍪 发现可能的token cookie: {cookie_name} = {cookie_value[:50]}...")
 
                 # 从响应头中获取cookies
                 cookies = {}
@@ -284,11 +353,10 @@ def auto_refresh_token_if_needed():
         result = login_client.login(username, password, rsa_password, use_fixed_data=True)
 
         if result['success']:
-            print("✅ Token自动更新成功！")
-
             # 获取新token并更新全局变量
             new_token = result.get('token')
             if new_token:
+                print("✅ Token自动更新成功！")
                 CURRENT_TOKEN = new_token
                 DEFAULT_HEADERS['Authorization'] = f'Bearer {new_token}'
 
@@ -299,7 +367,11 @@ def auto_refresh_token_if_needed():
                     AUC_TOKEN = cookies['auc']
                     print(f"✅ 同时获取到AUC token")
 
-            return True
+                return True
+            else:
+                print("❌ 登录成功但未获取到有效token")
+                print(f"🔍 登录响应: {result.get('full_response', {})}")
+                return False
         else:
             print(f"❌ Token自动更新失败: {result.get('message', result.get('error'))}")
             return False
