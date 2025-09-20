@@ -20,7 +20,7 @@ def get_china_time():
     return datetime.now(CHINA_TZ)
 
 # 配置信息（直接内嵌，避免复杂的导入）
-CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6ImQ1NWU3YjE1LTg5NWYtNDdhMi04MGFkLTlkNzEzZDExMzgzYSIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzAyMTg0LCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODMwOTM4NCwibmJmIjoxNzU4MzAyMTI0fQ.P7WbR_g5LAYX75u8MQ_mDTYNb0cLOq4jYBTJ-mXotOI"
+CURRENT_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmbGFnIjoiMCIsImdyYW50X3R5cGUiOiJXZWJDbGllbnQiLCJuYW1lIjoibGkxMjE0NjUyOTgxQDI5MjUuY29tIiwibmlja25hbWUiOiJsaTEyMTQ2NTI5ODEiLCJpZCI6IjcxNTQ2YmZiLTJkMTctM2E2Ni04YjQxLTFjYTM1OGFlZThmNiIsImRldmljZUlkIjoiZGV2aWNlSWQiLCJ0b2tlbkZsYWciOiIwIiwiY2xpZW50X2lkIjoiQjkyNTdGN0Y5QjFFRjE1Q0UiLCJyZXFJZCI6Ijk2ZjkxZDYwLWJiZTktNDIxOC05MThiLTA5NDI3N2VhYmViYyIsImF1ZCI6IkI5MjU3RjdGOUIxRUYxNUNFIiwic3ViIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwianRpIjoiNzE1NDZiZmItMmQxNy0zYTY2LThiNDEtMWNhMzU4YWVlOGY2IiwiaWF0IjoxNzU4MzU2ODYyLCJpc3MiOiJodHRwczovL21haWxsb2dpbi4yOTgwLmNvbS9vYXV0aCIsImV4cCI6MTc1ODM2NDA2MiwibmJmIjoxNzU4MzU2ODAyfQ.aMfMHRBcg3_dHlTNgrI_ZpG4fYpv6eLnoYN1uaT_Nrc"
 
 # 登录配置信息
 USERNAME = "li1214652981@2925.com"
@@ -143,12 +143,15 @@ def get_new_token():
         result = response.json()
 
         # 检查登录结果
+        print(f"🔍 登录响应: code={result.get('code')}, success={result.get('result', {}).get('success')}")
+
         if result.get('code') == 200 and result.get('result', {}).get('success'):
             new_token = result['result']['token']
-            print(f"✅ 成功获取新token")
+            print(f"✅ 成功获取新token: {new_token[:50] if new_token else 'None'}...")
             return new_token
         else:
             print(f"❌ 登录失败: {result.get('message', '未知错误')}")
+            print(f"🔍 完整响应: {result}")
             return None
 
     except Exception as e:
@@ -176,14 +179,20 @@ def auto_refresh_token_if_needed():
         # 获取新token
         new_token = get_new_token()
 
+        print(f"🔍 调试信息: new_token = {new_token[:50] if new_token else 'None'}...")
+
         if new_token:
             # 更新全局token
+            global CURRENT_TOKEN, DEFAULT_HEADERS
             CURRENT_TOKEN = new_token
             DEFAULT_HEADERS['Authorization'] = f'Bearer {new_token}'
+
+            # 验证更新是否成功
+            print(f"🔍 更新后的token: {CURRENT_TOKEN[:50]}...")
             print("✅ Token自动更新成功！")
             return True
         else:
-            print("❌ Token自动更新失败")
+            print("❌ Token自动更新失败 - 未获取到有效token")
             return False
 
     except Exception as e:
