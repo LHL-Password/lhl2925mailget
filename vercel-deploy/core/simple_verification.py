@@ -258,20 +258,100 @@ class Login2925:
                     print(f"🔍 完整result内容: {result}")
 
                     # 尝试从其他可能的字段获取token
-                    possible_token_fields = ['accessToken', 'access_token', 'authToken', 'auth_token', 'jwt', 'bearerToken']
-                    for field in possible_token_fields:
-                        if result.get(field):
-                            token = result.get(field)
-                            print(f"✅ 从字段 '{field}' 找到token: {token[:50]}...")
-                            break
+                    possible_token_fields = ['accessToken', 'access_token', 'authToken', 'auth_token', 'jwt', 'bearerToken', 'key', 'secKey']
+
+                    # 首先检查result_data（旧版API格式）
+                    if 'result_data' in locals():
+                        for field in possible_token_fields:
+                            if result_data.get(field):
+                                token = result_data.get(field)
+                                print(f"✅ 从result_data字段 '{field}' 找到token: {token[:50]}...")
+                                break
+
+                        # 如果还没找到，尝试从appInfo中获取
+                        if not token and result_data.get('appInfo'):
+                            app_info_data = result_data.get('appInfo', {})
+                            for field in possible_token_fields:
+                                if app_info_data.get(field):
+                                    token = app_info_data.get(field)
+                                    print(f"✅ 从appInfo字段 '{field}' 找到token: {token[:50]}...")
+                                    break
+
+                    # 如果还没找到，从顶级result中查找
+                    if not token:
+                        for field in possible_token_fields:
+                            if result.get(field):
+                                token = result.get(field)
+                                print(f"✅ 从顶级字段 '{field}' 找到token: {token[:50]}...")
+                                break
+
+                    # 如果还是没有找到token，尝试访问回调URL获取真正的token
+                    if not token:
+                        callback_url = result.get('result', {}).get('url') if result.get('result') else result.get('url')
+                        if callback_url:
+                            print(f"🔗 尝试访问回调URL获取token: {callback_url}")
+                            try:
+                                # 为服务器环境添加更多的请求头
+                                callback_headers = self.session.headers.copy()
+                                callback_headers.update({
+                                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                                    'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+                                    'Connection': 'keep-alive',
+                                    'Upgrade-Insecure-Requests': '1',
+                                })
+
+                                callback_response = self.session.get(
+                                    callback_url,
+                                    headers=callback_headers,
+                                    timeout=30,
+                                    allow_redirects=True
+                                )
+                                print(f"🔍 回调响应状态码: {callback_response.status_code}")
+                                print(f"🔍 回调响应cookies: {dict(callback_response.cookies)}")
+
+                                # 检查回调响应的cookies中是否有token
+                                for cookie_name, cookie_value in callback_response.cookies.items():
+                                    if ('token' in cookie_name.lower() or 'auth' in cookie_name.lower() or
+                                        'auc' in cookie_name.lower() or 'jwt' in cookie_name.lower()):
+                                        print(f"🍪 从回调URL获取到token cookie: {cookie_name} = {cookie_value[:50]}...")
+                                        token = cookie_value
+                                        break
+
+                                # 如果回调响应是JSON，也尝试解析
+                                if not token and 'application/json' in callback_response.headers.get('content-type', ''):
+                                    try:
+                                        callback_data = callback_response.json()
+                                        for field in possible_token_fields:
+                                            if callback_data.get(field):
+                                                token = callback_data.get(field)
+                                                print(f"✅ 从回调响应字段 '{field}' 找到token: {token[:50]}...")
+                                                break
+                                    except:
+                                        pass
+
+                            except Exception as e:
+                                print(f"❌ 访问回调URL失败: {e}")
+
+                    # 如果还是没有token，尝试使用key字段作为临时方案（仅用于服务器环境）
+                    if not token:
+                        key_value = result.get('result', {}).get('key') if result.get('result') else result.get('key')
+                        if key_value:
+                            print(f"⚠️  作为备用方案，尝试使用key字段: {key_value}")
+                            # 这里我们可以尝试用key值进行后续的API调用测试
+                            token = key_value
+                            print("🔧 使用key作为临时token，将在后续API调用中验证其有效性")
 
                     if not token:
                         print("❌ 在所有可能的字段中都未找到token")
                         # 如果仍然没有token，但登录成功，可能需要从cookies或其他地方获取
                         print("🔍 尝试从响应cookies中查找token...")
                         for cookie_name, cookie_value in response.cookies.items():
-                            if 'token' in cookie_name.lower() or 'auth' in cookie_name.lower():
+                            if 'token' in cookie_name.lower() or 'auth' in cookie_name.lower() or 'auc' in cookie_name.lower():
                                 print(f"🍪 发现可能的token cookie: {cookie_name} = {cookie_value[:50]}...")
+                                if not token:  # 如果还没有token，使用第一个找到的
+                                    token = cookie_value
+                                    print(f"✅ 使用cookie作为token: {cookie_name}")
+                                    break
 
                 # 从响应头中获取cookies
                 cookies = {}
@@ -477,7 +557,8 @@ def get_mail_list(page_count=50):
 
 
 def _get_mail_list_internal(page_count=50):
-    """内部函数：获取邮件列表（修复：添加cookies支持）"""
+    """内部函数：获取邮件列表（修复：添加cookies支持和多种token格式支持）"""
+    global CURRENT_TOKEN
     try:
         params = {
             'Folder': 'Inbox',
@@ -504,10 +585,76 @@ def _get_mail_list_internal(page_count=50):
             cookies['auc'] = AUC_TOKEN
             print(f"🍪 使用AUC token: {AUC_TOKEN[:50]}...")
 
+        # 如果CURRENT_TOKEN看起来像UUID格式（可能是key字段），尝试多种cookie设置
+        if len(CURRENT_TOKEN) == 36 and CURRENT_TOKEN.count('-') == 4:
+            print(f"🔧 检测到UUID格式的token，尝试多种cookie设置方式")
+            cookies.update({
+                'key': CURRENT_TOKEN,
+                'secKey': CURRENT_TOKEN,
+                'sessionKey': CURRENT_TOKEN,
+                'authKey': CURRENT_TOKEN
+            })
+
         for name, value in cookies.items():
             session.cookies.set(name, value)
 
-        response = session.get(MAIL_LIST_URL, params=params, headers=DEFAULT_HEADERS, timeout=30)
+        # 同时在请求头中也尝试多种认证方式
+        headers = DEFAULT_HEADERS.copy()
+        headers.update({
+            'X-Auth-Token': CURRENT_TOKEN,
+            'X-Session-Key': CURRENT_TOKEN,
+            'X-API-Key': CURRENT_TOKEN
+        })
+
+        print(f"🔍 使用的cookies: {list(cookies.keys())}")
+        print(f"🔍 请求URL: {MAIL_LIST_URL}")
+        print(f"🔍 请求参数: {params}")
+
+        response = session.get(MAIL_LIST_URL, params=params, headers=headers, timeout=30)
+
+        print(f"🔍 邮件列表响应状态码: {response.status_code}")
+        print(f"🔍 邮件列表响应头: {dict(response.headers)}")
+
+        # 检查响应内容类型
+        content_type = response.headers.get('content-type', '').lower()
+        print(f"🔍 响应内容类型: {content_type}")
+
+        if 'text/html' in content_type:
+            print("❌ 服务器返回HTML页面，可能是认证失败被重定向到登录页")
+            print(f"📄 响应内容预览: {response.text[:200]}...")
+
+            # 尝试重新登录获取新的token
+            print("🔄 尝试重新登录获取有效token...")
+            login_client = Login2925()
+            login_result = login_client.login(USERNAME, PASSWORD, RSA_PASSWORD, use_fixed_data=True)
+
+            if login_result.get('success') and login_result.get('token'):
+                print("✅ 重新登录成功，使用新token重试...")
+                CURRENT_TOKEN = login_result['token']
+
+                # 更新cookies和headers
+                cookies['aut'] = CURRENT_TOKEN
+                cookies['jwt_token'] = CURRENT_TOKEN
+                headers['Authorization'] = f'Bearer {CURRENT_TOKEN}'
+
+                # 重新设置cookies
+                for name, value in cookies.items():
+                    session.cookies.set(name, value)
+
+                # 重新发送请求
+                response = session.get(MAIL_LIST_URL, params=params, headers=headers, timeout=30)
+                print(f"🔍 重试后响应状态码: {response.status_code}")
+
+                if 'text/html' in response.headers.get('content-type', '').lower():
+                    print("❌ 重新登录后仍然返回HTML，可能是API端点或参数问题")
+                    return None
+            else:
+                print("❌ 重新登录失败")
+                return None
+
+        if response.status_code != 200:
+            print(f"🔍 邮件列表响应内容: {response.text[:500]}")
+
         response.raise_for_status()
         return response.json()
 
